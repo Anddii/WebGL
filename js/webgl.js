@@ -1,193 +1,50 @@
 import { loadShaderFiles, initShaderProgram } from "./initshaders.js";
 import * as mat4 from './gl-matrix-3.3.0/src/mat4.js';
-import * as vec3 from './gl-matrix-3.3.0/src/vec3.js';
+import { geoSphere, plane, triangle, cube} from "./meshCreator.js";
 
 const vs = '../shaders/shader.vs'
 const fs = '../shaders/shader.fs'
 
 var squareRotation = 0.0;
 
-function midPoint(v1, v2){
-  let midPoint = [0.5*(v1[0]+v2[0]), 0.5*(v1[1]+v2[1]), 0.5*(v1[2]+v2[2])]
-  return midPoint
-}
-
-function subDivide(verticles, indices){
-  const newVerticles = []
-  const newIndices = []
-  // FROM: https://github.com/d3dcoder/d3d12book/blob/master/Common/GeometryGenerator.cpp
-  //       v1
-  //       *
-  //      / \
-  //     /   \
-  //  m0*-----*m1
-  //   / \   / \
-  //  /   \ /   \
-  // *-----*-----*
-  // v0    m2     v2
-  var numTris = indices.length/3;
-  for(var i = 0; i < numTris; ++i)
-	{
-    let v0 = verticles[indices[i*3+0]];
-		let v1 = verticles[indices[i*3+1]];
-    let v2 = verticles[indices[i*3+2]];
-    
-    let m0 = midPoint(v0, v1);
-    let m1 = midPoint(v1, v2);
-    let m2 = midPoint(v0, v2);
-
-    newVerticles.push(v0)
-    newVerticles.push(v1)
-    newVerticles.push(v2)
-
-    newVerticles.push(m0)
-    newVerticles.push(m1)
-    newVerticles.push(m2)
-    
-    newIndices.push(i*6+0);
-		newIndices.push(i*6+3);
-		newIndices.push(i*6+5);
-
-		newIndices.push(i*6+3);
-		newIndices.push(i*6+4);
-		newIndices.push(i*6+5);
-
-		newIndices.push(i*6+5);
-		newIndices.push(i*6+4);
-		newIndices.push(i*6+2);
-
-		newIndices.push(i*6+3);
-		newIndices.push(i*6+1);
-		newIndices.push(i*6+4);
-  }
-  return [newVerticles, newIndices]
-}
-
 function initBuffersSphere(gl) {
-  const X = 0.525731;
-  const Z = 0.850651;
-
-  let positions =[
-    [-X, 0, Z], [X, 0, Z],
-    [-X, 0, -Z], [X, 0, -Z],
-    [0, Z, X], [0, Z, -X],
-    [0, -Z, X], [0, -Z, -X],
-    [Z, X, 0], [-Z, X, 0],
-    [Z, -X, 0], [-Z, -X, 0]
-  ]
-
-  let indices =
-  [
-    1,4,0, 4,9,0, 4,5,9, 8,5,4, 1,8,4,
-    1,10,8, 10,3,8, 8,3,5, 3,2,5, 3,7,2,
-    3,10,7, 10,6,7, 6,11,7, 6,0,11, 6,1,0,
-    10,1,6, 11,0,9, 2,11,9, 5,2,9, 11,2,7
-  ];
   
-  for(let i = 0; i<1; i++){
-    const values = subDivide(positions, indices)
-    positions = values[0]
-    indices = values[1]
-  }
-
-  positions = [].concat.apply([], positions);
-  for(var i = 0; i < positions.length/3; i++){
-    let vec = vec3.create();
-    vec[0] = positions[i*3+0]
-    vec[1] = positions[i*3+1]
-    vec[2] = positions[i*3+2]
-    let n = vec3.normalize(vec, vec)
-    positions[i*3+0] = n[0]
-    positions[i*3+1] = n[1]
-    positions[i*3+2] = n[2]
-  }
+  const mesh = cube(0)
 
   //Pass positions to the buffer
   const positionBuffer = gl.createBuffer();
   gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer);
   gl.bufferData(gl.ARRAY_BUFFER,
-    new Float32Array(positions),
+    new Float32Array(mesh.vertices),
     gl.STATIC_DRAW);
   
-  //Pass indices
+  //Indices
   const indexBuffer = gl.createBuffer();
   gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, indexBuffer);
   gl.bufferData(gl.ELEMENT_ARRAY_BUFFER,
-    new Uint16Array(indices), gl.STATIC_DRAW);
-
-  const colorBuffer = gl.createBuffer();
-  gl.bindBuffer(gl.ARRAY_BUFFER, colorBuffer);
-  const colors = [];
-  for(var i = 0; i<positions.length/3; i++){
-    colors.push(1,1,0,1)
-  }
-
-  gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(colors), gl.STATIC_DRAW);
-
-  return {
-    position: positionBuffer,
-    color: colorBuffer,
-    indices: indexBuffer
-  };
-}
-
-function initBuffers(gl) {
-  // Create a buffer for the square's positions.
-  const positionBuffer = gl.createBuffer();
-  // Select the positionBuffer
-  gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer);
-
-  // Now create an array of positions for the square.
-  const positions = [
-    // Front face
-    -1.0, -1.0,  1.0,
-     1.0, -1.0,  1.0,
-     1.0,  1.0,  1.0,
-    -1.0,  1.0,  1.0,
-    
-    // Back face
-    -1.0, -1.0, -1.0,
-    -1.0,  1.0, -1.0,
-     1.0,  1.0, -1.0,
-     1.0, -1.0, -1.0,
-  ];
-
-  // Now pass the list of positions into WebGL
-  gl.bufferData(gl.ARRAY_BUFFER,
-                new Float32Array(positions),
-                gl.STATIC_DRAW);
+    new Uint16Array(mesh.indices), gl.STATIC_DRAW);
   
+  //Color
   const colorBuffer = gl.createBuffer();
   gl.bindBuffer(gl.ARRAY_BUFFER, colorBuffer);
-  const colors = [
-    1.0,  1.0,  1.0,  1.0,
-    1.0,  0.0,  0.0,  1.0,
-    0.0,  1.0,  0.0,  1.0,
-    0.0,  0.0,  1.0,  1.0,
-    1.0,  1.0,  0.0,  1.0,
-    1.0,  0.0,  1.0,  1.0,
-  ];
-
-  gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(colors), gl.STATIC_DRAW);
-
-  const indexBuffer = gl.createBuffer();
-  gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, indexBuffer);
-  const indices = [
-    0,  1,  2,      0,  2,  3,    // front
-    4,  5,  6,      4,  6,  7,    // back
-    0,  3,  4,      4,  3,  5,    // left
-    6,  2,  1,      7,  6,  1,    // rigth
-    4,  1,  0,      1,  4,  7,    // bottom
-    3,  2,  5,      6,  5,  2     // top
-  ];
-
-  gl.bufferData(gl.ELEMENT_ARRAY_BUFFER,
-    new Uint16Array(indices), gl.STATIC_DRAW);
+  gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(mesh.colors), gl.STATIC_DRAW);
+  
+  //Normals
+  const normalBuffer = gl.createBuffer();
+  gl.bindBuffer(gl.ARRAY_BUFFER, normalBuffer);
+  gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(mesh.normals), gl.STATIC_DRAW);
+  
+  //UV
+  const textureCoordBuffer = gl.createBuffer();
+  gl.bindBuffer(gl.ARRAY_BUFFER, textureCoordBuffer);
+  gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(mesh.textureCoordinates), gl.STATIC_DRAW);
 
   return {
     position: positionBuffer,
     color: colorBuffer,
-    indices: indexBuffer
+    indices: indexBuffer,
+    normals: normalBuffer,
+    textureCoord: textureCoordBuffer,
   };
 }
 
@@ -196,7 +53,7 @@ function drawScene(gl, programInfo, buffers, deltaTime) {
   gl.clearDepth(1.0);
   gl.enable(gl.DEPTH_TEST);
   gl.depthFunc(gl.LEQUAL);
-  // gl.enable(gl.CULL_FACE);
+  gl.enable(gl.CULL_FACE);
 
   // Clear the canvas
   gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
@@ -220,14 +77,14 @@ function drawScene(gl, programInfo, buffers, deltaTime) {
   // Now move the drawing position
   mat4.translate(modelViewMatrix,     // destination matrix
                  modelViewMatrix,     // matrix to translate
-                 [-0.0, 0.0, -6.0]);  // amount to translate
-  mat4.rotate(modelViewMatrix, modelViewMatrix, squareRotation * 2.7, [0.5, 0.0, 0.0]);
-  
+                 [-0.0, 0.0, -5.0]);  // amount to translate
+
+  mat4.rotate(modelViewMatrix, modelViewMatrix, squareRotation * 2.7, [0.1, 0.2, 0.0]);
   squareRotation += deltaTime;
 
   // Tell WebGL how to pull out the positions from the position buffer
   {
-    const numComponents = 3;  // pull out 2 values per iteration
+    const numComponents = 3;  // pull out 3 values per iteration
     const type = gl.FLOAT;    // the data in the buffer is 32bit floats
     const normalize = false;  // don't normalize
     const stride = 0;         // how many bytes to get from one set of values to the next
@@ -263,6 +120,37 @@ function drawScene(gl, programInfo, buffers, deltaTime) {
         offset);
     gl.enableVertexAttribArray(
         programInfo.attribLocations.vertexColor);
+  }
+
+  // Tell WebGL how to pull out the Normals
+  {
+    const numComponents = 4;
+    const type = gl.FLOAT;
+    const normalize = false;
+    const stride = 0;
+    const offset = 0;
+    gl.bindBuffer(gl.ARRAY_BUFFER, buffers.normals);
+    gl.vertexAttribPointer(
+        programInfo.attribLocations.vertexNormal,
+        numComponents,
+        type,
+        normalize,
+        stride,
+        offset);
+    gl.enableVertexAttribArray(
+        programInfo.attribLocations.vertexNormal);
+  }
+
+  // tell webgl how to pull out the texture coordinates from buffer
+  {
+    const num = 2; // every coordinate composed of 2 values
+    const type = gl.FLOAT; // the data in the buffer is 32 bit float
+    const normalize = false; // don't normalize
+    const stride = 0; // how many bytes to get from one set to the next
+    const offset = 0; // how many bytes inside the buffer to start from
+    gl.bindBuffer(gl.ARRAY_BUFFER, buffers.textureCoord);
+    gl.vertexAttribPointer(programInfo.attribLocations.textureCoord, num, type, normalize, stride, offset);
+    gl.enableVertexAttribArray(programInfo.attribLocations.textureCoord);
   }
 
   gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, buffers.indices);
@@ -331,14 +219,16 @@ function main() {
         attribLocations: {
             vertexPosition: gl.getAttribLocation(shaderProgram, 'aVertexPosition'),
             vertexColor: gl.getAttribLocation(shaderProgram, 'aVertexColor'),
+            vertexNormal: gl.getAttribLocation(shaderProgram, 'aVertexNormal'),
+            textureCoord: gl.getAttribLocation(shaderProgram, 'aTextureCoord'),
         },
         uniformLocations: {
             projectionMatrix: gl.getUniformLocation(shaderProgram, 'uProjectionMatrix'),
             modelViewMatrix: gl.getUniformLocation(shaderProgram, 'uModelViewMatrix'),
+            uSampler: gl.getUniformLocation(shaderProgram, 'uSampler'),
         },
       };
       buffer = initBuffersSphere(gl);
-      //drawScene(gl, programInfo, buffer)
     })
   })
 }
