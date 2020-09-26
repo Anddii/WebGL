@@ -1,43 +1,75 @@
 import { loadShaderFiles, initShaderProgram } from "./initshaders.js";
 import * as mat4 from './gl-matrix-3.3.0/src/mat4.js';
-import { geoSphere, plane, triangle, cube} from "./meshCreator.js";
+import {loadTexture} from "./loadTexture.js"
+import GameObject from "./GameObject.js"
+import {cube, triangle, plane} from "./meshCreator.js";
 
 const vs = '../shaders/shader.vs'
 const fs = '../shaders/shader.fs'
 
-var squareRotation = 0.0;
+let gameObjects = []
 
 function initBuffersSphere(gl) {
   
-  const mesh = cube(0)
+  const newGameObject = new GameObject()
+  const newGameObject2 = new GameObject()
+
+  gameObjects.push(newGameObject)
+  gameObjects.push(newGameObject2)
+
+  const allData = []
+  allData.push(plane())
+  allData.push(cube())
+
+  let cubeBuffer = {
+    vertices: [],
+    indices: [],
+    colors: [],
+    normals: [],
+    textureCoordinates: []
+  };
+
+  allData.forEach(element => {
+    console.log(cubeBuffer.vertices.length/3)
+    element.indices = element.indices.map(function(item){
+      return item+cubeBuffer.vertices.length/3;
+    })
+    cubeBuffer.vertices = cubeBuffer.vertices.concat(element.vertices)
+    cubeBuffer.indices = cubeBuffer.indices.concat(element.indices)
+    cubeBuffer.colors = cubeBuffer.colors.concat(element.colors)
+    cubeBuffer.normals = cubeBuffer.normals.concat(element.normals)
+    cubeBuffer.textureCoordinates = cubeBuffer.textureCoordinates.concat(element.textureCoordinates)
+  });
+
+  console.log(cubeBuffer)
 
   //Pass positions to the buffer
   const positionBuffer = gl.createBuffer();
   gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer);
   gl.bufferData(gl.ARRAY_BUFFER,
-    new Float32Array(mesh.vertices),
+    new Float32Array(cubeBuffer.vertices),
     gl.STATIC_DRAW);
   
   //Indices
   const indexBuffer = gl.createBuffer();
   gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, indexBuffer);
   gl.bufferData(gl.ELEMENT_ARRAY_BUFFER,
-    new Uint16Array(mesh.indices), gl.STATIC_DRAW);
+    new Uint16Array(cubeBuffer.indices), gl.STATIC_DRAW);
   
   //Color
   const colorBuffer = gl.createBuffer();
   gl.bindBuffer(gl.ARRAY_BUFFER, colorBuffer);
-  gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(mesh.colors), gl.STATIC_DRAW);
+  gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(cubeBuffer.colors), gl.STATIC_DRAW);
   
   //Normals
   const normalBuffer = gl.createBuffer();
   gl.bindBuffer(gl.ARRAY_BUFFER, normalBuffer);
-  gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(mesh.normals), gl.STATIC_DRAW);
+  gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(cubeBuffer.normals), gl.STATIC_DRAW);
   
   //UV
   const textureCoordBuffer = gl.createBuffer();
   gl.bindBuffer(gl.ARRAY_BUFFER, textureCoordBuffer);
-  gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(mesh.textureCoordinates), gl.STATIC_DRAW);
+  gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(cubeBuffer.textureCoordinates), gl.STATIC_DRAW);
 
   return {
     position: positionBuffer,
@@ -48,8 +80,8 @@ function initBuffersSphere(gl) {
   };
 }
 
-function drawScene(gl, programInfo, buffers, deltaTime) {
-  gl.clearColor(0.0, 0.0, 0.0, 1.0);
+function drawScene(gl, programInfo, buffers, texture) {
+  gl.clearColor(0.0, 0.0, 0.0, 1);
   gl.clearDepth(1.0);
   gl.enable(gl.DEPTH_TEST);
   gl.depthFunc(gl.LEQUAL);
@@ -70,17 +102,6 @@ function drawScene(gl, programInfo, buffers, deltaTime) {
                    aspect,
                    zNear,
                    zFar);
-
-  // Set the drawing position to the "identity" point
-  const modelViewMatrix = mat4.create();
-
-  // Now move the drawing position
-  mat4.translate(modelViewMatrix,     // destination matrix
-                 modelViewMatrix,     // matrix to translate
-                 [-0.0, 0.0, -5.0]);  // amount to translate
-
-  mat4.rotate(modelViewMatrix, modelViewMatrix, squareRotation * 2.7, [0.1, 0.2, 0.0]);
-  squareRotation += deltaTime;
 
   // Tell WebGL how to pull out the positions from the position buffer
   {
@@ -124,7 +145,7 @@ function drawScene(gl, programInfo, buffers, deltaTime) {
 
   // Tell WebGL how to pull out the Normals
   {
-    const numComponents = 4;
+    const numComponents = 3;
     const type = gl.FLOAT;
     const normalize = false;
     const stride = 0;
@@ -153,41 +174,92 @@ function drawScene(gl, programInfo, buffers, deltaTime) {
     gl.enableVertexAttribArray(programInfo.attribLocations.textureCoord);
   }
 
-  gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, buffers.indices);
+  // gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, buffers.indices);
 
   // Tell WebGL to use our program when drawing
   gl.useProgram(programInfo.program);
 
-  // Set the shader uniforms
-  gl.uniformMatrix4fv(
+  // Set the drawing position to the "identity" point
+  
+  gameObjects.forEach((gameObject, index) => {
+    
+    const modelViewMatrix = mat4.create();
+    // Now move the drawing position
+    mat4.translate(modelViewMatrix,     // destination matrix
+      modelViewMatrix,     // matrix to translate
+      [gameObject.transform.position[0], gameObject.transform.position[1], gameObject.transform.position[2]]);  // amount to translate
+      
+    mat4.rotate(modelViewMatrix, modelViewMatrix, gameObject.transform.rotation[0] * 1, [1.0, 0.0, 0.0]);
+    mat4.rotate(modelViewMatrix, modelViewMatrix, gameObject.transform.rotation[1] * 1, [0.0, 1.0, 0.0]);
+    mat4.rotate(modelViewMatrix, modelViewMatrix, gameObject.transform.rotation[2] * 1, [0.0, 0.0, 1.0]);
+    
+    const normalMatrix = mat4.create();
+    mat4.invert(normalMatrix, modelViewMatrix);
+    mat4.transpose(normalMatrix, normalMatrix);
+      
+      // Set the shader uniforms
+    gl.uniformMatrix4fv(
+      programInfo.uniformLocations.uNormalMatrix,
+      false,
+      normalMatrix);
+    gl.uniformMatrix4fv(
       programInfo.uniformLocations.projectionMatrix,
       false,
       projectionMatrix);
-  gl.uniformMatrix4fv(
+    gl.uniformMatrix4fv(
       programInfo.uniformLocations.modelViewMatrix,
       false,
       modelViewMatrix);
-
-  {
-    const vertexCount = gl.getBufferParameter(gl.ELEMENT_ARRAY_BUFFER, gl.BUFFER_SIZE)/2;
-    const type = gl.UNSIGNED_SHORT;
-    const offset = 0;
-    gl.drawElements(gl.TRIANGLES, vertexCount, type, offset);
-  }
+        
+    {
+      // Tell WebGL we want to affect texture unit 0
+      gl.activeTexture(gl.TEXTURE0);
+      // Bind the texture to texture unit 0
+      gl.bindTexture(gl.TEXTURE_2D, texture);
+      // Tell the shader we bound the texture to texture unit 0
+      gl.uniform1i(programInfo.uniformLocations.uSampler, 0);
+      
+      //const vertexCount = gl.getBufferParameter(gl.ELEMENT_ARRAY_BUFFER, gl.BUFFER_SIZE)/2;
+      let vertexCount = 36;
+      const type = gl.UNSIGNED_SHORT;
+      let offset = 12;
+      if(index == 1){
+        vertexCount=6
+        offset=0
+      }
+      gl.drawElements(gl.TRIANGLES, vertexCount, type, offset);
+    }
+  });
 }
 
 var then = 0;
 let gl;
 let programInfo;
 let buffer;
+let texture; 
+
 // Draw the scene repeatedly
 function update(now) {
   now *= 0.001;  // convert to seconds
   const deltaTime = now - then;
   then = now;
 
+  if(gameObjects[0]){
+    gameObjects[0].transform.position[2] = -10;
+    gameObjects[0].transform.position[0] = Math.sin(now)*3;
+    gameObjects[0].transform.rotation[1] += deltaTime;
+    // gameObjects[0].transform.rotation[2] += deltaTime;
+  }
+
+  if(gameObjects[1]){
+    gameObjects[1].transform.position[2] = -20;
+    gameObjects[1].transform.position[0] = Math.sin(-now);
+    gameObjects[1].transform.rotation[0] -= deltaTime;
+    // gameObjects[1].transform.rotation[1] -= deltaTime;
+  }
+
   if(gl && programInfo && buffer)
-    drawScene(gl, programInfo, buffer, deltaTime);
+    drawScene(gl, programInfo, buffer, texture, deltaTime);
 
   requestAnimationFrame(update);
 }
@@ -195,7 +267,10 @@ function update(now) {
 function main() {
   //Get Canvas and initialize the GL context
   const canvas = document.querySelector("#glCanvas");
+  // canvas.width  = window.innerWidth;
+  // canvas.height = window.innerHeight;
   gl = canvas.getContext("webgl");
+  texture = loadTexture(gl, './images/logo.jpg');
 
   // Only continue if WebGL is available and working
   if (gl === null) {
@@ -226,6 +301,7 @@ function main() {
             projectionMatrix: gl.getUniformLocation(shaderProgram, 'uProjectionMatrix'),
             modelViewMatrix: gl.getUniformLocation(shaderProgram, 'uModelViewMatrix'),
             uSampler: gl.getUniformLocation(shaderProgram, 'uSampler'),
+            uNormalMatrix: gl.getUniformLocation(shaderProgram, 'uNormalMatrix'),
         },
       };
       buffer = initBuffersSphere(gl);
