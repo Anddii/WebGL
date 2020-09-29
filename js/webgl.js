@@ -1,25 +1,39 @@
 import { loadShaderFiles, initShaderProgram } from "./initshaders.js";
 import * as mat4 from './gl-matrix-3.3.0/src/mat4.js';
+import * as vec3 from './gl-matrix-3.3.0/src/vec3.js';
 import {loadTexture} from "./loadTexture.js"
 import GameObject from "./GameObject.js"
-import {cube, triangle, plane} from "./meshCreator.js";
+import  meshCreator from "./meshCreator.js";
+import { toRadian } from "./gl-matrix-3.3.0/src/common.js";
 
 const vs = '../shaders/shader.vs'
 const fs = '../shaders/shader.fs'
 
 let gameObjects = []
+let meshProperties = {}
+
+let mView;
+mView = mat4.create();
+
+let eye = vec3.create();
+eye = [0,0,0]
+let lookatPos = vec3.create();
+lookatPos = [0,0,-10]
+let upDir = vec3.create();
+upDir=[0,1,0]
+mat4.lookAt(mView,eye,lookatPos,upDir)
 
 function initBuffersSphere(gl) {
-  
-  const newGameObject = new GameObject()
-  const newGameObject2 = new GameObject()
 
-  gameObjects.push(newGameObject)
-  gameObjects.push(newGameObject2)
+  const meshCreat = new meshCreator();
 
   const allData = []
-  allData.push(plane())
-  allData.push(cube())
+  allData.push(meshCreat.cube(meshProperties))
+  allData.push(meshCreat.plane(meshProperties))
+
+  for(let i = 0; i < 100; i++){
+    gameObjects.push(new GameObject(meshProperties['cube'],[Math.random() * (10 - -10) + -5,Math.random() * (10 - -10) + -5,Math.random() * (-50 - -10) + -10]))
+  }
 
   let cubeBuffer = {
     vertices: [],
@@ -91,14 +105,13 @@ function drawScene(gl, programInfo, buffers, texture) {
   gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
 
   // Create a perspective matrix
-  const fieldOfView = 45 * Math.PI / 180;   // in radians
   const aspect = gl.canvas.clientWidth / gl.canvas.clientHeight;
   const zNear = 0.1;
   const zFar = 100.0;
   const projectionMatrix = mat4.create();
 
   mat4.perspective(projectionMatrix,
-                   fieldOfView,
+                   toRadian(50),
                    aspect,
                    zNear,
                    zFar);
@@ -185,9 +198,9 @@ function drawScene(gl, programInfo, buffers, texture) {
     
     const modelViewMatrix = mat4.create();
     // Now move the drawing position
-    mat4.translate(modelViewMatrix,     // destination matrix
-      modelViewMatrix,     // matrix to translate
-      [gameObject.transform.position[0], gameObject.transform.position[1], gameObject.transform.position[2]]);  // amount to translate
+    mat4.translate(modelViewMatrix,
+      modelViewMatrix,
+      [gameObject.transform.position[0], gameObject.transform.position[1], gameObject.transform.position[2]]);
       
     mat4.rotate(modelViewMatrix, modelViewMatrix, gameObject.transform.rotation[0] * 1, [1.0, 0.0, 0.0]);
     mat4.rotate(modelViewMatrix, modelViewMatrix, gameObject.transform.rotation[1] * 1, [0.0, 1.0, 0.0]);
@@ -202,6 +215,10 @@ function drawScene(gl, programInfo, buffers, texture) {
       programInfo.uniformLocations.uNormalMatrix,
       false,
       normalMatrix);
+    gl.uniformMatrix4fv(
+      programInfo.uniformLocations.viewMatrix,
+      false,
+      mView);
     gl.uniformMatrix4fv(
       programInfo.uniformLocations.projectionMatrix,
       false,
@@ -220,13 +237,9 @@ function drawScene(gl, programInfo, buffers, texture) {
       gl.uniform1i(programInfo.uniformLocations.uSampler, 0);
       
       //const vertexCount = gl.getBufferParameter(gl.ELEMENT_ARRAY_BUFFER, gl.BUFFER_SIZE)/2;
-      let vertexCount = 36;
+      let vertexCount = gameObject.mesh.vertexCount;
+      let offset = gameObject.mesh.offset;
       const type = gl.UNSIGNED_SHORT;
-      let offset = 12;
-      if(index == 1){
-        vertexCount=6
-        offset=0
-      }
       gl.drawElements(gl.TRIANGLES, vertexCount, type, offset);
     }
   });
@@ -245,14 +258,12 @@ function update(now) {
   then = now;
 
   if(gameObjects[0]){
-    gameObjects[0].transform.position[2] = -10;
     gameObjects[0].transform.position[0] = Math.sin(now)*3;
     gameObjects[0].transform.rotation[1] += deltaTime;
     // gameObjects[0].transform.rotation[2] += deltaTime;
   }
 
   if(gameObjects[1]){
-    gameObjects[1].transform.position[2] = -20;
     gameObjects[1].transform.position[0] = Math.sin(-now);
     gameObjects[1].transform.rotation[0] -= deltaTime;
     // gameObjects[1].transform.rotation[1] -= deltaTime;
@@ -299,6 +310,7 @@ function main() {
         },
         uniformLocations: {
             projectionMatrix: gl.getUniformLocation(shaderProgram, 'uProjectionMatrix'),
+            viewMatrix: gl.getUniformLocation(shaderProgram, 'uViewMatrix'),
             modelViewMatrix: gl.getUniformLocation(shaderProgram, 'uModelViewMatrix'),
             uSampler: gl.getUniformLocation(shaderProgram, 'uSampler'),
             uNormalMatrix: gl.getUniformLocation(shaderProgram, 'uNormalMatrix'),
@@ -308,6 +320,26 @@ function main() {
     })
   })
 }
+
+document.addEventListener('keydown', function(event) {
+  switch (event.key) {
+    case "d":
+      mat4.translate(mView,mView,[-0.1,0,0.0])
+      break;
+    case "a":
+      mat4.translate(mView,mView,[0.1,0,0.0])
+      break;
+    case "w":
+      mat4.translate(mView,mView,[0,0,0.1])
+      break;
+    case "s":
+      mat4.translate(mView,mView,[0,0,-0.1])
+      break;
+    case "e":
+      mat4.rotateY(mView,mView,-0.1)
+      break;
+  }
+});
   
 window.onload = main;
 requestAnimationFrame(update);

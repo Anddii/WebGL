@@ -4,8 +4,9 @@ export class GameObject{
     transform;
     mesh;
 
-    constructor(){
-        this.transform = new Transform();
+    constructor(mesh, position){
+        this.transform = new Transform(position);
+        this.mesh = mesh
     }
 }
 
