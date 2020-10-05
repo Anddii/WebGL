@@ -7,21 +7,26 @@ import { loadShaderFiles, initShaderProgram } from "./Initshaders.js"
 import  MeshCreator from "./MeshCreator.js"
 import {loadTexture} from "./loadTexture.js"
 
-
 export default class Wengine{
     
     gl
     shaderPrograms = []
-    programInfo
+    programInfo = []
     buffer
     meshProperties = {}
 
     mView = mat4.create()
+    directionalLight = mat4.create()
 
     textures = []
     scene = []
 
     timeLast = 0
+
+    depthTextureExt
+
+    shadowMapFramebuffer
+    shadowMapTexture
 
     constructor(canvasId){
         //Get Canvas and initialize the GL context
@@ -37,11 +42,17 @@ export default class Wengine{
 
        this.textures.push(loadTexture(this.gl, './images/logo.jpg'))
 
+       this.depthTextureExt = this.gl.getExtension('WEBGL_depth_texture');
+
        this.createShaderProgram('../shaders/shader.vs', '../shaders/shader.fs')
        .then((res) => {
             this.shaderPrograms.push(res)
-            this.buffer = this.initBuffers()
-            this.start()
+            this.createShaderProgram('../shaders/shadowShader.vs', '../shaders/shadowShader.fs')
+            .then((res) => {
+                this.shaderPrograms.push(res)
+                this.buffer = this.initBuffers()
+                this.start()
+            })
        })
     }
 
@@ -54,10 +65,14 @@ export default class Wengine{
         let upDir = vec3.create()
         upDir=[0,1,0]
         mat4.lookAt(this.mView,eye,lookatPos,upDir)
+
+        let lightPos = vec3.create()
+        lightPos = [10,10, 0]
+        mat4.lookAt(this.directionalLight, lightPos, lookatPos, upDir)
         
         this.scene.push(new GameObject(null, [0,0,-10]))
-        this.scene.push(new GameObject(this.meshProperties['cube'], [0,0,0], [0,0,0], [1,1,1]))
-        this.scene.push(new GameObject(this.meshProperties['plane'], [0,-1,0], [90,0,0], [10,10,10]))
+        this.scene.push(new GameObject(this.meshProperties['cube'], [0,0,0], [0,20,0], [1,1,1]))
+        this.scene.push(new GameObject(this.meshProperties['plane'], [0,-1,0], [90,0,0], [40,40,40]))
 
         this.createControls()
 
@@ -70,33 +85,121 @@ export default class Wengine{
         this.timeLast = timeNow
 
         if(this.scene[1]){
-            this.scene[1].transform.position[0] = Math.sin(timeNow*4)*3*Math.cos(timeNow);
-            this.scene[1].transform.position[2] = Math.sin(timeNow*8)*3*Math.cos(timeNow);
-            
-            this.scene[1].transform.rotation = [0,this.scene[1].transform.rotation[1]+90*deltaTime,0];
+
         }
 
+        this.shadowMapRender();
         this.render()
         requestAnimationFrame(()=>this.update(Date.now()))
     }
 
-    render(){
-        if(!this.gl || !this.programInfo || !this.buffer){
+    shadowMapRender(){
+        this.gl.enable(this.gl.CULL_FACE)
+        this.gl.enable(this.gl.DEPTH_TEST)
+
+        this.gl.cullFace(this.gl.FRONT);
+
+        if(!this.shadowMapFramebuffer || !this.gl || this.programInfo.length <= 0 || !this.buffer){
             console.log('GL not ready')
             return
         }
+
+        //Bind shadowmap buffer (Render Target)
+        this.gl.bindFramebuffer(this.gl.FRAMEBUFFER, this.shadowMapFramebuffer);
+        this.gl.viewport( 0, 0, 2048, 2048 );
+        this.gl.clear(this.gl.DEPTH_BUFFER_BIT);
+
+        // Tell WebGL to use our program when drawing
+        this.gl.useProgram(this.programInfo[1].program)
+
+        // Create a perspective matrix
+        const zNear = 0.1
+        const zFar = 100.0
+        const lightProjection = mat4.create()
+        mat4.ortho(lightProjection, -10.0, 10.0, -10.0, 10.0, zNear, zFar)
+        let lightSpaceMatrix = mat4.create()
+        mat4.mul(lightSpaceMatrix, lightProjection, this.directionalLight)
+
+        //pull verticles
+        {
+            const numComponents = 3  // pull out 3 values per iteration
+            const type = this.gl.FLOAT    // the data in the buffer is 32bit floats
+            const normalize = false  // don't normalize
+            const stride = 0         // how many bytes to get from one set of values to the next
+                                    // 0 = use type and numComponents above
+            const offset = 0         // how many bytes inside the buffer to start from
+            this.gl.bindBuffer(this.gl.ARRAY_BUFFER, this.buffer.position)
+            this.gl.vertexAttribPointer(
+                this.programInfo[1].attribLocations.vertexPosition,
+                numComponents,
+                type,
+                normalize,
+                stride,
+                offset)
+            this.gl.enableVertexAttribArray(
+                this.programInfo[1].attribLocations.vertexPosition)
+        }
+
+        this.scene.forEach((gameObject) => {
+
+            if(!gameObject.mesh)
+                return
+    
+            const modelViewMatrix = mat4.create()
+            
+            //Set gameObject position
+            mat4.translate(modelViewMatrix,
+                modelViewMatrix,
+                [gameObject.transform.position[0], gameObject.transform.position[1], gameObject.transform.position[2]])
+                
+             //Set gameObject rotation
+            mat4.rotate(modelViewMatrix, modelViewMatrix, toRadian(gameObject.transform.rotation[0]) * 1, [1.0, 0.0, 0.0])
+            mat4.rotate(modelViewMatrix, modelViewMatrix, toRadian(gameObject.transform.rotation[1]) * 1, [0.0, 1.0, 0.0])
+            mat4.rotate(modelViewMatrix, modelViewMatrix, toRadian(gameObject.transform.rotation[2]) * 1, [0.0, 0.0, 1.0])
+
+            //Set gameObject scale
+            mat4.scale(modelViewMatrix, modelViewMatrix, gameObject.transform.scale)
+              
+            // Set the shader uniforms
+            this.gl.uniformMatrix4fv(
+              this.programInfo[1].uniformLocations.lightSpaceMatrix,
+              false,
+              lightSpaceMatrix)
+            this.gl.uniformMatrix4fv(
+              this.programInfo[1].uniformLocations.modelViewMatrix,
+              false,
+              modelViewMatrix)
+                
+            {
+              let vertexCount = gameObject.mesh.vertexCount
+              let offset = gameObject.mesh.offset
+              const type = this.gl.UNSIGNED_SHORT
+              this.gl.drawElements(4, vertexCount, type, offset)
+            }
+        })
+
+        this.gl.viewport( 0, 0, 640, 480 );
+        this.gl.cullFace(this.gl.BACK);
+    }
+
+    render(){
+        if(!this.gl || this.programInfo.length <= 0 || !this.buffer){
+            console.log('GL not ready')
+            return
+        }
+
+        this.gl.bindFramebuffer(this.gl.FRAMEBUFFER, null);
 
         this.gl.clearColor(0.0, 0.0, 0.5, 1)
         this.gl.clearDepth(1.0)
         this.gl.enable(this.gl.DEPTH_TEST)
         this.gl.depthFunc(this.gl.LEQUAL)
-        this.gl.enable(this.gl.CULL_FACE)
 
         // Clear the canvas
         this.gl.clear(this.gl.COLOR_BUFFER_BIT | this.gl.DEPTH_BUFFER_BIT)
 
         // Tell WebGL to use our program when drawing
-        this.gl.useProgram(this.programInfo.program)
+        this.gl.useProgram(this.programInfo[0].program)
 
         // Create a perspective matrix
         const aspect = this.gl.canvas.clientWidth / this.gl.canvas.clientHeight
@@ -120,14 +223,14 @@ export default class Wengine{
             const offset = 0         // how many bytes inside the buffer to start from
             this.gl.bindBuffer(this.gl.ARRAY_BUFFER, this.buffer.position)
             this.gl.vertexAttribPointer(
-                this.programInfo.attribLocations.vertexPosition,
+                this.programInfo[0].attribLocations.vertexPosition,
                 numComponents,
                 type,
                 normalize,
                 stride,
                 offset)
             this.gl.enableVertexAttribArray(
-                this.programInfo.attribLocations.vertexPosition)
+                this.programInfo[0].attribLocations.vertexPosition)
         }
 
         // Tell WebGL how to pull out the colors from the color buffer
@@ -140,14 +243,14 @@ export default class Wengine{
             const offset = 0
             this.gl.bindBuffer(this.gl.ARRAY_BUFFER, this.buffer.color)
             this.gl.vertexAttribPointer(
-                this.programInfo.attribLocations.vertexColor,
+                this.programInfo[0].attribLocations.vertexColor,
                 numComponents,
                 type,
                 normalize,
                 stride,
                 offset)
             this.gl.enableVertexAttribArray(
-                this.programInfo.attribLocations.vertexColor)
+                this.programInfo[0].attribLocations.vertexColor)
         }
 
         // Tell WebGL how to pull out the Normals
@@ -159,14 +262,14 @@ export default class Wengine{
             const offset = 0
             this.gl.bindBuffer(this.gl.ARRAY_BUFFER, this.buffer.normals)
             this.gl.vertexAttribPointer(
-                this.programInfo.attribLocations.vertexNormal,
+                this.programInfo[0].attribLocations.vertexNormal,
                 numComponents,
                 type,
                 normalize,
                 stride,
                 offset)
             this.gl.enableVertexAttribArray(
-                this.programInfo.attribLocations.vertexNormal)
+                this.programInfo[0].attribLocations.vertexNormal)
         }
 
         // tell webgl how to pull out the texture coordinates from buffer
@@ -177,8 +280,8 @@ export default class Wengine{
             const stride = 0 // how many bytes to get from one set to the next
             const offset = 0 // how many bytes inside the buffer to start from
             this.gl.bindBuffer(this.gl.ARRAY_BUFFER, this.buffer.textureCoord)
-            this.gl.vertexAttribPointer(this.programInfo.attribLocations.textureCoord, num, type, normalize, stride, offset)
-            this.gl.enableVertexAttribArray(this.programInfo.attribLocations.textureCoord)
+            this.gl.vertexAttribPointer(this.programInfo[0].attribLocations.textureCoord, num, type, normalize, stride, offset)
+            this.gl.enableVertexAttribArray(this.programInfo[0].attribLocations.textureCoord)
         }
 
         this.scene.forEach((gameObject) => {
@@ -204,24 +307,38 @@ export default class Wengine{
 
             //Set gameObject scale
             mat4.scale(modelViewMatrix, modelViewMatrix, gameObject.transform.scale)
+
+            //Light
+            const lightProjection = mat4.create()
+
+            mat4.ortho(lightProjection, -10.0, 10.0, -10.0, 10.0,
+                            zNear,
+                            zFar)
+
+            let lightSpaceMatrix = mat4.create()
+            mat4.mul(lightSpaceMatrix, lightProjection, this.directionalLight)
               
             // Set the shader uniforms
             this.gl.uniformMatrix4fv(
-              this.programInfo.uniformLocations.uNormalMatrix,
+              this.programInfo[0].uniformLocations.uNormalMatrix,
               false,
               normalMatrix)
             this.gl.uniformMatrix4fv(
-              this.programInfo.uniformLocations.viewMatrix,
+              this.programInfo[0].uniformLocations.viewMatrix,
               false,
               this.mView)
             this.gl.uniformMatrix4fv(
-              this.programInfo.uniformLocations.projectionMatrix,
+              this.programInfo[0].uniformLocations.projectionMatrix,
               false,
               projectionMatrix)
             this.gl.uniformMatrix4fv(
-              this.programInfo.uniformLocations.modelViewMatrix,
+              this.programInfo[0].uniformLocations.modelViewMatrix,
               false,
               modelViewMatrix)
+            this.gl.uniformMatrix4fv(
+                this.programInfo[0].uniformLocations.lightSpaceMatrix,
+                false,
+                lightSpaceMatrix)
                 
             {
               // Tell WebGL we want to affect texture unit 0
@@ -229,7 +346,12 @@ export default class Wengine{
               // Bind the texture to texture unit 0
               this.gl.bindTexture(this.gl.TEXTURE_2D, this.textures[0])
               // Tell the shader we bound the texture to texture unit 0
-              this.gl.uniform1i(this.programInfo.uniformLocations.uSampler, 0)
+              this.gl.uniform1i(this.programInfo[0].uniformLocations.uSampler, 0)
+
+
+              this.gl.activeTexture(this.gl.TEXTURE1)
+              this.gl.bindTexture(this.gl.TEXTURE_2D, this.shadowMapTexture)
+              this.gl.uniform1i(this.programInfo[0].uniformLocations.shadowMap, 1)
               
               //const vertexCount = gl.getBufferParameter(gl.ELEMENT_ARRAY_BUFFER, gl.BUFFER_SIZE)/2
               let vertexCount = gameObject.mesh.vertexCount
@@ -237,6 +359,27 @@ export default class Wengine{
               const type = this.gl.UNSIGNED_SHORT
               this.gl.drawElements(this.gl.TRIANGLES, vertexCount, type, offset)
             }
+        })
+    }
+
+    createProgram(shaderProgram){
+        this.programInfo.push({
+            program: shaderProgram,
+            attribLocations: {
+                vertexPosition: this.gl.getAttribLocation(shaderProgram, 'aVertexPosition'),
+                vertexColor: this.gl.getAttribLocation(shaderProgram, 'aVertexColor'),
+                vertexNormal: this.gl.getAttribLocation(shaderProgram, 'aVertexNormal'),
+                textureCoord: this.gl.getAttribLocation(shaderProgram, 'aTextureCoord'),
+            },
+            uniformLocations: {
+                projectionMatrix: this.gl.getUniformLocation(shaderProgram, 'uProjectionMatrix'),
+                viewMatrix: this.gl.getUniformLocation(shaderProgram, 'uViewMatrix'),
+                modelViewMatrix: this.gl.getUniformLocation(shaderProgram, 'uModelViewMatrix'),
+                uSampler: this.gl.getUniformLocation(shaderProgram, 'uSampler'),
+                uNormalMatrix: this.gl.getUniformLocation(shaderProgram, 'uNormalMatrix'),
+                lightSpaceMatrix: this.gl.getUniformLocation(shaderProgram, 'uLightSpaceMatrix'),
+                shadowMap: this.gl.getUniformLocation(shaderProgram, 'uShadowMap'),
+            },
         })
     }
 
@@ -252,22 +395,7 @@ export default class Wengine{
                 .then(res =>{
                     fsShader=res
                     shaderProgram = initShaderProgram(this.gl, vsShader, fsShader)
-                    this.programInfo = {
-                        program: shaderProgram,
-                        attribLocations: {
-                            vertexPosition: this.gl.getAttribLocation(shaderProgram, 'aVertexPosition'),
-                            vertexColor: this.gl.getAttribLocation(shaderProgram, 'aVertexColor'),
-                            vertexNormal: this.gl.getAttribLocation(shaderProgram, 'aVertexNormal'),
-                            textureCoord: this.gl.getAttribLocation(shaderProgram, 'aTextureCoord'),
-                        },
-                        uniformLocations: {
-                            projectionMatrix: this.gl.getUniformLocation(shaderProgram, 'uProjectionMatrix'),
-                            viewMatrix: this.gl.getUniformLocation(shaderProgram, 'uViewMatrix'),
-                            modelViewMatrix: this.gl.getUniformLocation(shaderProgram, 'uModelViewMatrix'),
-                            uSampler: this.gl.getUniformLocation(shaderProgram, 'uSampler'),
-                            uNormalMatrix: this.gl.getUniformLocation(shaderProgram, 'uNormalMatrix'),
-                        },
-                    }
+                    this.createProgram(shaderProgram)
                     resolve(shaderProgram)
                 })
             })
@@ -327,6 +455,26 @@ export default class Wengine{
         const textureCoordBuffer = this.gl.createBuffer()
         this.gl.bindBuffer(this.gl.ARRAY_BUFFER, textureCoordBuffer)
         this.gl.bufferData(this.gl.ARRAY_BUFFER, new Float32Array(longMeshData.textureCoordinates), this.gl.STATIC_DRAW)
+
+        //Shadows
+        this.shadowMapFramebuffer = this.gl.createFramebuffer();
+        this.gl.bindFramebuffer(this.gl.FRAMEBUFFER, this.shadowMapFramebuffer);
+
+        this.shadowMapTexture = this.gl.createTexture();
+        this.gl.bindTexture(this.gl.TEXTURE_2D, this.shadowMapTexture);
+        this.gl.texParameteri(this.gl.TEXTURE_2D, this.gl.TEXTURE_MIN_FILTER, this.gl.NEAREST);
+        this.gl.texParameteri(this.gl.TEXTURE_2D, this.gl.TEXTURE_MAG_FILTER, this.gl.NEAREST);
+        this.gl.texParameteri(this.gl.TEXTURE_2D, this.gl.TEXTURE_WRAP_S, this.gl.CLAMP_TO_EDGE);
+        this.gl.texParameteri(this.gl.TEXTURE_2D, this.gl.TEXTURE_WRAP_T, this.gl.CLAMP_TO_EDGE);
+
+        this.gl.texImage2D(this.gl.TEXTURE_2D, 0, this.gl.DEPTH_COMPONENT, 2048, 2048,
+            0, this.gl.DEPTH_COMPONENT, this.gl.UNSIGNED_SHORT, null);
+
+        this.gl.framebufferTexture2D(this.gl.FRAMEBUFFER, this.gl.DEPTH_ATTACHMENT, 
+            this.gl.TEXTURE_2D, this.shadowMapTexture, 0);
+        
+        this.gl.bindTexture(this.gl.TEXTURE_2D, null);
+        this.gl.bindFramebuffer(this.gl.FRAMEBUFFER, null);
 
         return {
             position: positionBuffer,
