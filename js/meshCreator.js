@@ -1,11 +1,35 @@
 import {subDivide} from "./subdivide.js"
+import {loadObjFile} from "./loadObj.js"
 import * as vec3 from './gl-matrix-3.3.0/src/vec3.js';
 import * as vec4 from './gl-matrix-3.3.0/src/vec4.js';
 
 export default class MeshCreator{
   offset = 0;
 
+  objFile(meshProperties, filePath){
+
+    return new Promise((resolve, reject)=>{
+      loadObjFile(filePath)
+      .then((res)=>{
+        meshProperties['teapot'] = {
+          offset: this.offset,
+          vertexCount: res.indices.length,
+        }
+        this.offset = res.positions.length;
+
+        resolve({
+          vertices: res.positions,
+          indices: res.indices,
+          colors: res.colors,
+          normals: res.normals,
+          // textureCoordinates: textureCoordinates
+        })
+      })
+    })
+  }
+
   cube(meshProperties){
+
     const positions = [
       // Front face
       -1.0, -1.0,  1.0,
@@ -164,45 +188,47 @@ export default class MeshCreator{
   }
 
   plane(meshProperties){
-    let positions =[
-      [-1, -1, 0], [1, -1, 0],
-      [-1, 1, 0], [1, 1, 0]
-    ]
-    let indices = [2,1,0, 1,2,3];
+    return new Promise((resolve, reject)=>{
+      let positions =[
+        [-1, -1, 0], [1, -1, 0],
+        [-1, 1, 0], [1, 1, 0]
+      ]
+      let indices = [2,1,0, 1,2,3];
 
-    positions = [].concat.apply([], positions);
-    const colors = [];
-    const normals = [
-      0.0,  0.0,  -1.0,
-      0.0,  0.0,  -1.0,
-      0.0,  0.0,  -1.0,
-      0.0,  0.0,  -1.0,
-    ];
-    for(var i = 0; i<positions.length/3; i++){
-      colors.push(1,1,1,1)
-    }
+      positions = [].concat.apply([], positions);
+      const colors = [];
+      const normals = [
+        0.0,  0.0,  -1.0,
+        0.0,  0.0,  -1.0,
+        0.0,  0.0,  -1.0,
+        0.0,  0.0,  -1.0,
+      ];
+      for(var i = 0; i<positions.length/3; i++){
+        colors.push(1,1,1,1)
+      }
 
-    const textureCoordinates = [
-      1.0,  1.0,
-      0.0,  1.0,
-      1.0,  0.0,
-      0.0,  0.0,
-    ]
+      const textureCoordinates = [
+        1.0,  1.0,
+        0.0,  1.0,
+        1.0,  0.0,
+        0.0,  0.0,
+      ]
 
-    meshProperties['plane'] = {
-      offset: this.offset,
-      vertexCount: indices.length,
-    }
+      meshProperties['plane'] = {
+        offset: this.offset,
+        vertexCount: indices.length,
+      }
 
-    this.offset = positions.length;
-
-    return{
+      this.offset = positions.length;
+      resolve({
         vertices: positions,
         indices: indices,
         colors: colors,
         normals: normals,
         textureCoordinates: textureCoordinates
-    }
+      })
+    })
+
   }
 
   geoSphere(subDivisions){

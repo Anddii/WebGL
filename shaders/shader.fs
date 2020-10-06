@@ -8,7 +8,7 @@ uniform sampler2D uSampler;
 uniform sampler2D uShadowMap;
 
 
-highp float ShadowCalculation(highp vec4 fragPosLightSpace)
+highp float ShadowCalculation(highp vec4 fragPosLightSpace, highp vec3 lightDir)
 {
       // perform perspective divide
       highp vec3 projCoords = fragPosLightSpace.xyz / fragPosLightSpace.w;
@@ -19,10 +19,10 @@ highp float ShadowCalculation(highp vec4 fragPosLightSpace)
       // get depth of current fragment from light's perspective
       highp float currentDepth = projCoords.z;
 
-      highp float bias = -0.00005;
+      highp float bias = max(0.05*(1.0-dot(vNormal, lightDir)), 0.005);
       // check whether current frag pos is in shadow
       highp float shadow = 0.0;
-      highp vec2 texelSize = vec2(1)/vec2(2048,2048);
+      highp vec2 texelSize = vec2(1)/vec2(2024,2024);
       for(int x = -1; x <= 1; ++x)
       {
             for(int y = -1; y <= 1; ++y)
@@ -45,12 +45,19 @@ void main(void) {
 
       // diffuse
       highp vec3 lightPos = vec3(2,2,0);
-      highp vec3 lightDir = normalize(lightPos-vFragPos);
+      highp vec3 lightDir = normalize(lightPos);
       highp float diff = max(dot(lightDir, normal), 0.0);
       highp vec3 diffuse = diff * lightColor;
 
-      highp float shadow = ShadowCalculation(vFragPosLightSpace); 
-      highp vec3 lighting = ambient+(vec3(1)-vec3(shadow)) * (diffuse * color);
-      
+      // specular
+      highp vec3 viewDir = normalize(vec3(0,0,-10) - vFragPos);
+      highp float spec = 0.0;
+      highp vec3 halfwayDir = normalize(lightDir + viewDir);  
+      spec = pow(max(dot(normal, halfwayDir), 0.0), 64.0);
+      highp vec3 specular = spec * lightColor;
+
+      highp float shadow = ShadowCalculation(vFragPosLightSpace, lightDir); 
+      highp vec3 lighting = (ambient+(vec3(1)-vec3(shadow))) * (specular + diffuse) * color;
+
       gl_FragColor = vec4(lighting, texture2D(uSampler, vTextureCoord).a*vColor.a);
 }
