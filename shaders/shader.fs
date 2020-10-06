@@ -38,10 +38,10 @@ void main(void) {
 
       highp vec3 color = texture2D(uSampler, vTextureCoord).xyz*vColor.xyz;
       highp vec3 normal = normalize(vNormal);
-      highp vec3 lightColor = vec3(0.5);
+      highp vec3 lightColor = vec3(.5);
 
       //ambient
-      highp vec3 ambient = 0.7 * color;
+      highp vec3 ambient = 0.5 * color;
 
       // diffuse
       highp vec3 lightPos = vec3(2,2,0);
@@ -57,7 +57,10 @@ void main(void) {
       highp vec3 specular = spec * lightColor;
 
       highp float shadow = ShadowCalculation(vFragPosLightSpace, lightDir); 
-      highp vec3 lighting = (ambient+(vec3(1)-vec3(shadow))) * (specular + diffuse) * color;
+
+      
+      // highp vec3 lighting = ((ambient+(vec3(1)-vec3(shadow))) * (specular + diffuse)) * color;
+      highp vec3 lighting = (ambient + specular*(vec3(2)-shadow) + diffuse*(vec3(2)-shadow)) * color;
 
       gl_FragColor = vec4(lighting, texture2D(uSampler, vTextureCoord).a*vColor.a);
 }
