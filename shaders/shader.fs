@@ -22,7 +22,7 @@ highp float ShadowCalculation(highp vec4 fragPosLightSpace, highp vec3 lightDir)
       highp float bias = max(0.05*(1.0-dot(vNormal, lightDir)), 0.005);
       // check whether current frag pos is in shadow
       highp float shadow = 0.0;
-      highp vec2 texelSize = vec2(1)/vec2(2024,2024);
+      highp vec2 texelSize = vec2(2)/vec2(2024,2024);
       for(int x = -1; x <= 1; ++x)
       {
             for(int y = -1; y <= 1; ++y)

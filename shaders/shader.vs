@@ -20,7 +20,7 @@ void main(void) {
     vNormal = vec3(uNormalMatrix * vec4(aVertexNormal, 1.0));
     vColor = aVertexColor;
     vTextureCoord = aTextureCoord;
-    vFragPosLightSpace = uLightSpaceMatrix * normalize(vec4(vFragPos, 5.0));
+    vFragPosLightSpace = uLightSpaceMatrix * normalize(vec4(vFragPos, 1.0));
     
     gl_Position = uProjectionMatrix * uViewMatrix * uModelViewMatrix * aVertexPosition;
 }

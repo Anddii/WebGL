@@ -100,7 +100,7 @@ export function render(wEngine){
 
     wEngine.gl.bindFramebuffer(wEngine.gl.FRAMEBUFFER, null);
 
-    wEngine.gl.clearColor(0.0, 0.0, 0.5, 1)
+    wEngine.gl.clearColor(0.3, 0.4, 0.6, 1)
     wEngine.gl.clearDepth(1.0)
     wEngine.gl.enable(wEngine.gl.DEPTH_TEST)
     wEngine.gl.depthFunc(wEngine.gl.LEQUAL)
@@ -221,7 +221,7 @@ export function render(wEngine){
         //Light
         const lightProjection = mat4.create()
 
-        mat4.ortho(lightProjection, -10.0, 10.0, -10.0, 10.0,
+        mat4.ortho(lightProjection, -50.0, 50.0, -50.0, 50.0,
                         zNear,
                         zFar)
 
@@ -251,10 +251,12 @@ export function render(wEngine){
             lightSpaceMatrix)
             
         {
+            // console.log(gameObject.material)
+
             // Tell WebGL we want to affect texture unit 0
             wEngine.gl.activeTexture(wEngine.gl.TEXTURE0)
             // Bind the texture to texture unit 0
-            wEngine.gl.bindTexture(wEngine.gl.TEXTURE_2D, wEngine.textures[0])
+            wEngine.gl.bindTexture(wEngine.gl.TEXTURE_2D, wEngine.textures[gameObject.material.texture])
             // Tell the shader we bound the texture to texture unit 0
             wEngine.gl.uniform1i(wEngine.programInfo[0].uniformLocations.uSampler, 0)
 

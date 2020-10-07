@@ -2,9 +2,10 @@ import * as mat4 from './gl-matrix-3.3.0/src/mat4.js'
 import * as vec3 from './gl-matrix-3.3.0/src/vec3.js'
 
 import GameObject from "./gameObject.js"
+import Material from "./material.js"
 import { loadShaderFiles, initShaderProgram } from "./Initshaders.js"
 import  MeshCreator from "./meshCreator.js"
-import {loadTexture} from "./loadTexture.js"
+import {loadTexture, createEmptyTexture} from "./loadTexture.js"
 
 import {shadowMapRender, render} from "./render.js"
 
@@ -40,8 +41,11 @@ export default class Wengine{
            alert("Unable to initialize WebGL. Your browser or machine may not support it.")
            return
        }
-
+       this.textures.push(createEmptyTexture(this.gl))
        this.textures.push(loadTexture(this.gl, './images/ground.jpg'))
+       
+       this.materials['normal']=new Material(0,[0,0,0])
+       this.materials['ground']=new Material(1,[0,0,0])
 
        this.depthTextureExt = this.gl.getExtension('WEBGL_depth_texture');
 
@@ -74,9 +78,9 @@ export default class Wengine{
         lightPos = [100,100, 0]
         mat4.lookAt(this.directionalLight, lightPos, lookatPos, upDir)
 
-        this.scene.push(new GameObject(null, [0,0,-10]))    //Camera
-        this.scene.push(new GameObject(this.meshProperties['teapot'], [0,0.7,0], [0,0,0], [0.2,0.2,0.2]))
-        this.scene.push(new GameObject(this.meshProperties['plane'], [0,-1,0], [90,0,0], [20,20,20]))
+        this.scene.push(new GameObject(null, null, [0,0,-10]))    //Camera
+        this.scene.push(new GameObject(this.meshProperties['teapot'], this.materials['normal'], [0,0.7,0], [0,0,0], [0.2,0.2,0.2]))
+        this.scene.push(new GameObject(this.meshProperties['plane'], this.materials['ground'], [0,-1,0], [90,0,0], [20,20,20]))
 
         this.createControls()
 
