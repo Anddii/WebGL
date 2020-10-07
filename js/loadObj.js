@@ -29,7 +29,7 @@ export function loadObjFile(filePath){
 
         const colors = [];
         for(var i = 0; i<positions.length/3; i++){
-            colors.push(1,0.6,0,1)
+            colors.push(1,1,1,1)
         }
 
         return{

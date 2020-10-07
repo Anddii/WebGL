@@ -255,21 +255,17 @@ export function render(wEngine){
             wEngine.gl.activeTexture(wEngine.gl.TEXTURE0)
             // Bind the texture to texture unit 0
             wEngine.gl.bindTexture(wEngine.gl.TEXTURE_2D, wEngine.textures[0])
-            if(index == 2){
-                wEngine.gl.bindTexture(wEngine.gl.TEXTURE_2D, wEngine.shadowMapTexture)
-            }
-          // Tell the shader we bound the texture to texture unit 0
-          wEngine.gl.uniform1i(wEngine.programInfo[0].uniformLocations.uSampler, 0)
+            // Tell the shader we bound the texture to texture unit 0
+            wEngine.gl.uniform1i(wEngine.programInfo[0].uniformLocations.uSampler, 0)
 
-
-          wEngine.gl.activeTexture(wEngine.gl.TEXTURE1)
-          wEngine.gl.bindTexture(wEngine.gl.TEXTURE_2D, wEngine.shadowMapTexture)
-          wEngine.gl.uniform1i(wEngine.programInfo[0].uniformLocations.shadowMap, 1)
-          
-          let vertexCount = gameObject.mesh.vertexCount
-          let offset = gameObject.mesh.offset
-          const type = wEngine.gl.UNSIGNED_SHORT
-          wEngine.gl.drawElements(wEngine.gl.TRIANGLES, vertexCount, type, offset)
+            wEngine.gl.activeTexture(wEngine.gl.TEXTURE1)
+            wEngine.gl.bindTexture(wEngine.gl.TEXTURE_2D, wEngine.shadowMapTexture)
+            wEngine.gl.uniform1i(wEngine.programInfo[0].uniformLocations.shadowMap, 1)
+            
+            let vertexCount = gameObject.mesh.vertexCount
+            let offset = gameObject.mesh.offset
+            const type = wEngine.gl.UNSIGNED_SHORT
+            wEngine.gl.drawElements(wEngine.gl.TRIANGLES, vertexCount, type, offset)
         }
     })
 }

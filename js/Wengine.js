@@ -19,6 +19,7 @@ export default class Wengine{
     mView = mat4.create()
     directionalLight = mat4.create()
 
+    materials = []
     textures = []
     scene = []
 
@@ -40,7 +41,7 @@ export default class Wengine{
            return
        }
 
-       this.textures.push(loadTexture(this.gl, './images/logo.jpg'))
+       this.textures.push(loadTexture(this.gl, './images/ground.jpg'))
 
        this.depthTextureExt = this.gl.getExtension('WEBGL_depth_texture');
 
@@ -74,8 +75,7 @@ export default class Wengine{
         mat4.lookAt(this.directionalLight, lightPos, lookatPos, upDir)
 
         this.scene.push(new GameObject(null, [0,0,-10]))    //Camera
-        this.scene.push(new GameObject(this.meshProperties['teapot'], [0,1,0], [0,0,0], [0.2,0.2,0.2]))
-        this.scene.push(new GameObject(this.meshProperties['plane'], [0,0,-8], [0,0,0], [1,1,1]))
+        this.scene.push(new GameObject(this.meshProperties['teapot'], [0,0.7,0], [0,0,0], [0.2,0.2,0.2]))
         this.scene.push(new GameObject(this.meshProperties['plane'], [0,-1,0], [90,0,0], [20,20,20]))
 
         this.createControls()
