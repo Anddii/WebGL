@@ -10,17 +10,17 @@ export function loadObjFile(filePath){
         let lines = text.split('\n');
         for(let line = 0; line < lines.length; line++){
             const lineSplit = (lines[line]).split(" ")
-            if(lineSplit[0] == 'v'){
+            if(lineSplit[0] === 'v'){
                 positions.push(lineSplit[2])
                 positions.push(lineSplit[3])
                 positions.push(lineSplit[4])
             }
-            if(lineSplit[0] == 'vn'){
+            if(lineSplit[0] === 'vn'){
                 normals.push(lineSplit[2])
                 normals.push(lineSplit[3])
                 normals.push(lineSplit[4])
             }
-            if(lineSplit[0] == 'f'){
+            if(lineSplit[0] === 'f'){
                 indices.push(lineSplit[1].split("/")[0]-1)
                 indices.push(lineSplit[2].split("/")[0]-1)
                 indices.push(lineSplit[3].split("/")[0]-1)

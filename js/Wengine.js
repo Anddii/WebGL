@@ -3,13 +3,13 @@ import * as vec3 from './gl-matrix-3.3.0/src/vec3.js'
 
 import GameObject from "./gameObject.js"
 import Material from "./material.js"
-import { loadShaderFiles, initShaderProgram } from "./Initshaders.js"
+import { loadShaderFiles, initShaderProgram } from "./initshaders.js"
 import  MeshCreator from "./meshCreator.js"
 import {loadTexture, createEmptyTexture} from "./loadTexture.js"
 
 import {shadowMapRender, render} from "./render.js"
 
-export default class Wengine{
+class Wengine{
     
     gl
     shaderPrograms = []
@@ -19,6 +19,9 @@ export default class Wengine{
 
     mView = mat4.create()
     directionalLight = mat4.create()
+
+    lightPosition = vec3.create()
+    cameraPosition = vec3.create()
 
     materials = []
     textures = []
@@ -32,24 +35,28 @@ export default class Wengine{
     shadowMapTexture
 
     constructor(canvasId){
+        
         //Get Canvas and initialize the GL context
-       const canvas = document.querySelector(canvasId)
+        const canvas = document.querySelector(canvasId)
+        console.log(canvas)
 
-       this.gl = canvas.getContext("webgl")
+        this.gl = canvas.getContext("webgl")
 
-       if (this.gl === null) {
-           alert("Unable to initialize WebGL. Your browser or machine may not support it.")
-           return
-       }
+        if (this.gl === null) {
+            alert("Unable to initialize WebGL. Your browser or machine may not support it.")
+            return
+        }
+        
        this.textures.push(createEmptyTexture(this.gl))
        this.textures.push(loadTexture(this.gl, './images/ground.jpg'))
        
        this.materials['normal']=new Material(0,[0,0,0])
        this.materials['ground']=new Material(1,[0,0,0])
+       this.materials['shadow']=new Material(2,[0,0,0])
 
        this.depthTextureExt = this.gl.getExtension('WEBGL_depth_texture');
 
-       this.createShaderProgram('../shaders/shader.vs', '../shaders/shader.fs')
+       this.createShaderProgram('/shaders/shader.vs', '../shaders/shader.fs')
        .then((res) => {
             this.shaderPrograms.push(res)
             this.createShaderProgram('../shaders/shadowShader.vs', '../shaders/shadowShader.fs')
@@ -67,7 +74,8 @@ export default class Wengine{
     start(){
         //Set camera position to [0,0,-10]
         let eye = vec3.create()
-        eye = [0,0,-10]
+        eye = [0,3,-10]
+        this.cameraPosition=eye
         let lookatPos = vec3.create()
         lookatPos = [0,0,0]
         let upDir = vec3.create()
@@ -75,11 +83,13 @@ export default class Wengine{
         mat4.lookAt(this.mView,eye,lookatPos,upDir)
 
         let lightPos = vec3.create()
-        lightPos = [100,100, 0]
+        lightPos = [20,10, 0]
+        this.lightPosition = lightPos
         mat4.lookAt(this.directionalLight, lightPos, lookatPos, upDir)
 
-        this.scene.push(new GameObject(null, null, [0,0,-10]))    //Camera
+        this.scene.push(new GameObject(null, null, [0,3,-10]))    //Camera
         this.scene.push(new GameObject(this.meshProperties['teapot'], this.materials['normal'], [0,0.7,0], [0,0,0], [0.2,0.2,0.2]))
+        // this.scene.push(new GameObject(this.meshProperties['plane'], this.materials['shadow'], [0,0,-9.9], [0,0,0], [0.2,0.2,0.2]))
         this.scene.push(new GameObject(this.meshProperties['plane'], this.materials['ground'], [0,-1,0], [90,0,0], [20,20,20]))
 
         this.createControls()
@@ -121,6 +131,8 @@ export default class Wengine{
                 uNormalMatrix: this.gl.getUniformLocation(shaderProgram, 'uNormalMatrix'),
                 lightSpaceMatrix: this.gl.getUniformLocation(shaderProgram, 'uLightSpaceMatrix'),
                 shadowMap: this.gl.getUniformLocation(shaderProgram, 'uShadowMap'),
+                lightPosition: this.gl.getUniformLocation(shaderProgram, 'uLightPosition'),
+                cameraPosition: this.gl.getUniformLocation(shaderProgram, 'uCameraPosition'),
             },
         })
     }
@@ -230,7 +242,7 @@ export default class Wengine{
 
     createControls(){
         document.addEventListener('keydown', (event) => {
-
+            console.log(event.key)
             switch (event.key) {
                 case "d":
                     this.scene[0].transform.position[0] -= 1;
@@ -256,17 +268,31 @@ export default class Wengine{
                 case "f":
                     this.scene[0].transform.position[1] -= 1
                 break;
-            }
 
+                case "ArrowRight":
+                    this.lightPosition[0] -= 1;
+                break;
+                case "ArrowLeft":
+                    this.lightPosition[0] += 1;
+                break;
+            }
             let lookatPos = vec3.create()
             lookatPos = [0,0,0]
-           
-            let eye = vec3.create()
-            eye = this.scene[0].transform.position
 
             let upDir = vec3.create()
             upDir=[0,1,0]
+
+            let lightPos = vec3.create()
+            lightPos = this.lightPosition
+            this.lightPosition = lightPos
+            mat4.lookAt(this.directionalLight, lightPos, lookatPos, upDir)
+           
+            let eye = vec3.create()
+            eye = this.scene[0].transform.position
+            this.cameraPosition=eye
+
             mat4.lookAt(this.mView,eye,lookatPos,upDir)
         });
     }
 }
+export default Wengine;

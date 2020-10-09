@@ -9,8 +9,8 @@ uniform mat4 uProjectionMatrix;
 uniform mat4 uNormalMatrix;
 uniform mat4 uLightSpaceMatrix;
 
-varying lowp vec4 vColor;
-varying lowp vec3 vNormal;
+varying highp vec4 vColor;
+varying highp vec3 vNormal;
 varying highp vec3 vFragPos;
 varying highp vec4 vFragPosLightSpace;
 varying highp vec2 vTextureCoord;
@@ -20,7 +20,7 @@ void main(void) {
     vNormal = vec3(uNormalMatrix * vec4(aVertexNormal, 1.0));
     vColor = aVertexColor;
     vTextureCoord = aTextureCoord;
-    vFragPosLightSpace = uLightSpaceMatrix * normalize(vec4(vFragPos, 1.0));
+    vFragPosLightSpace = uLightSpaceMatrix * vec4(vFragPos, 1.0);
     
     gl_Position = uProjectionMatrix * uViewMatrix * uModelViewMatrix * aVertexPosition;
 }

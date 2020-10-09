@@ -22,10 +22,10 @@ export function shadowMapRender(wEngine){
     wEngine.gl.useProgram(wEngine.programInfo[1].program)
 
     // Create a perspective matrix
-    const zNear = 0.1
-    const zFar = 2000.0
+    const zNear = 1
+    const zFar = 10
     const lightProjection = mat4.create()
-    mat4.ortho(lightProjection, -50.0, 50.0, -50.0, 50.0, zNear, zFar)
+    mat4.ortho(lightProjection, -50.0, 50.0, -50.0, 50.0, -50, 200)
     let lightSpaceMatrix = mat4.create()
     mat4.mul(lightSpaceMatrix, lightProjection, wEngine.directionalLight)
 
@@ -87,6 +87,7 @@ export function shadowMapRender(wEngine){
         }
     })
 
+    wEngine.textures[2]=(wEngine.shadowMapTexture)
     wEngine.gl.viewport( 0, 0, 640, 480 );
     wEngine.gl.cullFace(wEngine.gl.BACK);
 }
@@ -113,8 +114,8 @@ export function render(wEngine){
 
     // Create a perspective matrix
     const aspect = wEngine.gl.canvas.clientWidth / wEngine.gl.canvas.clientHeight
-    const zNear = 0.1
-    const zFar = 1000.0
+    const zNear = 1.0
+    const zFar = 100
     const projectionMatrix = mat4.create()
 
     mat4.perspective(projectionMatrix,
@@ -220,10 +221,9 @@ export function render(wEngine){
 
         //Light
         const lightProjection = mat4.create()
-
         mat4.ortho(lightProjection, -50.0, 50.0, -50.0, 50.0,
-                        zNear,
-                        zFar)
+                        -50,
+                        200)
 
         let lightSpaceMatrix = mat4.create()
         mat4.mul(lightSpaceMatrix, lightProjection, wEngine.directionalLight)
@@ -249,6 +249,14 @@ export function render(wEngine){
             wEngine.programInfo[0].uniformLocations.lightSpaceMatrix,
             false,
             lightSpaceMatrix)
+        
+        wEngine.gl.uniform3fv(
+            wEngine.programInfo[0].uniformLocations.lightPosition,
+            wEngine.lightPosition)
+            
+        wEngine.gl.uniform3fv(
+            wEngine.programInfo[0].uniformLocations.cameraPosition,
+            wEngine.cameraPosition)
             
         {
             // console.log(gameObject.material)
