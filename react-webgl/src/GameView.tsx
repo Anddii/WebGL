@@ -15,11 +15,8 @@ export const GameView: FC<any> = props =>{
 
         if(canvas.current){
             const instance: any | null = canvas.current;
-            console.log(instance.clientWidth)
-            console.log(instance.clientHeight)
             instance.width=instance.clientWidth
             instance.height=instance.clientHeight
-
         }
     });
     

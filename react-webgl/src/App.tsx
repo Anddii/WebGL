@@ -1,61 +1,21 @@
 import React, { useState, useEffect } from 'react';
 import logo from './logo.svg';
 import 'flexlayout-react/style/light.css';
+import './App.css';
 import FlexLayout from "flexlayout-react";
 
 import gameView from './GameView';
 
 function App() {
 
-  const json: Object = {
-    global: {tabEnableClose:false},
-    borders:[
-    		{
-	        "type": "border",
-          "location":"bottom",
-          "size": 100,
-          "children": []
-        },
-    ],
-    layout: {
-        "type": "row",
-        "weight": 100,
-        "children": [
-            {
-                "type": "tabset",
-                "weight": 50,
-                "selected": 0,
-                "children": [
-                    {
-                        "type": "tab",
-                        "name": "Game",
-                        "component": "game"
-                    }
-                ]
-            },
-            {
-                "type": "tabset",
-                "weight": 50,
-                "selected": 0,
-                "children": [
-                    {
-                        "type": "tab",
-                        "name": "Two",
-                        "component": "text"
-                    },
-                    {
-                        "type": "tab",
-                        "name": "Three",
-                        "component": "text"
-                    }
-                ]
-            }
-        ]
-    }
-  };
+  const json: Object = {"global":{"tabEnableClose":false},"layout":{"type":"row","id":"#1","children":[{"type":"row","id":"#11","weight":52.035421809916365,"children":[{"type":"tabset","id":"#2","weight":50,"children":[{"type":"tab","id":"#3","name":"Game","component":"game"}]},{"type":"tabset","id":"#10","weight":50,"children":[{"type":"scene","id":"#5","name":"Free","component":"scene"}],"active":true}]},{"type":"tabset","id":"#4","weight":15.006455383295808,"children":[{"type":"scene","id":"#6","name":"Scene","component":"scene"}]},{"type":"tabset","id":"#17","weight":14.951201405728252,"children":[{"type":"tab","id":"#8","name":"Folders","component":"text"}]},{"type":"tabset","id":"#14","weight":18.006921401059575,"children":[{"type":"tab","id":"#7","name":"Object","component":"text"}]}]},"borders":[{"type":"border","size":100,"location":"bottom","children":[]}]};
 
   const [model, setModel]: Array<any> = useState(FlexLayout.Model.fromJson(json));
 
+  function resetMode(){
+    setModel(FlexLayout.Model.fromJson(json))
+  }
+  
   function saveModel(){
     const myJson: string = model.toJson()
     console.log(JSON.stringify(myJson))
@@ -75,7 +35,10 @@ function App() {
     if (component === "text") {
         return (<div className="panel">Panel {node.getName()}</div>);
     }
-    if (component === "game") {
+    if(component === 'scene'){
+      return(<h1>scee</h1>)
+    }
+    if (component === "game"){
       return (
         <div>
           {gameView(null)}
@@ -86,7 +49,16 @@ function App() {
   return (
     <div className="App">
       <header className="App-header">
-        <FlexLayout.Layout model={model} factory={factory}/>
+        <div className="App-main">
+          <div className="App-top">
+            <button onClick={saveModel}>Save layout</button>
+            <button onClick={resetMode}>reset</button>
+          </div>
+          <div className="App-flex">
+            <FlexLayout.Layout model={model} factory={factory}/>
+          </div>
+        </div>
+        
       </header>
     </div>
   );
