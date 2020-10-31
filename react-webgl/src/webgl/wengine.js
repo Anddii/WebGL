@@ -18,6 +18,8 @@ class Wengine{
     buffer
     meshProperties = {}
 
+    longBufferData = {}
+
     mView = mat4.create()
     directionalLight = mat4.create()
 
@@ -26,6 +28,8 @@ class Wengine{
 
     materials = []
     textures = []
+    
+    sceneStart = []
     scene = []
 
     timeLast = 0
@@ -34,6 +38,8 @@ class Wengine{
 
     shadowMapFramebuffer
     shadowMapTexture
+
+    playing = false
 
     constructor(canvasId){
         
@@ -49,10 +55,10 @@ class Wengine{
         
        this.textures.push(createEmptyTexture(this.gl))
        this.textures.push(loadTexture(this.gl, './images/ground.jpg'))
-       
-       this.materials['normal']=new Material(0,[0,0,0])
-       this.materials['ground']=new Material(1,[0,0,0])
-       this.materials['shadow']=new Material(2,[0,0,0])
+
+       this.materials['normal']=new Material(0,{r:1,g:1,b:1,a:1})
+       this.materials['ground']=new Material(1,{r:1,g:1,b:1,a:1})
+       this.materials['shadow']=new Material(2,{r:1,g:1,b:1,a:1})
 
        this.depthTextureExt = this.gl.getExtension('WEBGL_depth_texture');
 
@@ -72,41 +78,34 @@ class Wengine{
     }
 
     start(){
-        //Set camera position to [0,0,-10]
-        let eye = vec3.create()
-        eye = [0,3,-10]
-        this.cameraPosition=eye
-        let lookatPos = vec3.create()
-        lookatPos = [0,0,0]
-        let upDir = vec3.create()
-        upDir=[0,1,0]
-        mat4.lookAt(this.mView,eye,lookatPos,upDir)
-
-        let lightPos = vec3.create()
-        lightPos = [20,10, 0]
-        this.lightPosition = lightPos
-        mat4.lookAt(this.directionalLight, lightPos, lookatPos, upDir)
-
-        this.scene.push(new GameObject(null, null, [0,3,-10]))    //Camera
-        this.scene.push(new GameObject(this.meshProperties['teapot'], this.materials['normal'], [0,0.7,0], [0,0,0], [0.2,0.2,0.2]))
-        // this.scene.push(new GameObject(this.meshProperties['plane'], this.materials['shadow'], [0,0,-9.9], [0,0,0], [0.2,0.2,0.2]))
-        this.scene.push(new GameObject(this.meshProperties['plane'], this.materials['ground'], [0,-1,0], [90,0,0], [20,20,20]))
-
+        // localStorage.removeItem('scene');
+        
+        this.scene = JSON.parse(JSON.stringify(this.sceneStart));
         this.createControls()
 
+        this.timeLast = Date.now() * 0.001
         requestAnimationFrame(()=>this.update(Date.now()))
     }
 
     update(timeNow){
+
         timeNow *= 0.001  // convert to seconds
         const deltaTime = timeNow - this.timeLast
         this.timeLast = timeNow
 
-        if(this.scene[1]){
-            //this.scene[1].transform.position[2] = -20;
-            // this.scene[1].transform.position[0] = Math.sin(-timeNow*5);
-            this.scene[1].transform.rotation[1] -= deltaTime*23;
-            // gameObjects[1].transform.rotation[1] -= deltaTime;
+        const upDir = [0,1,0]
+        const lookatPos = [0,0,0]
+        const eye = this.scene[0].transform.position
+        this.cameraPosition=eye
+
+        this.lightPosition = this.scene[1].transform.position
+        mat4.lookAt(this.mView,eye,lookatPos,upDir)
+        mat4.lookAt(this.directionalLight, this.lightPosition, lookatPos, upDir)
+
+        if(this.playing){
+            if(this.scene[2]){
+                this.scene[2].transform.rotation[1] += deltaTime*32
+            }
         }
 
         shadowMapRender(this);
@@ -122,6 +121,7 @@ class Wengine{
                 vertexColor: this.gl.getAttribLocation(shaderProgram, 'aVertexColor'),
                 vertexNormal: this.gl.getAttribLocation(shaderProgram, 'aVertexNormal'),
                 textureCoord: this.gl.getAttribLocation(shaderProgram, 'aTextureCoord'),
+
             },
             uniformLocations: {
                 projectionMatrix: this.gl.getUniformLocation(shaderProgram, 'uProjectionMatrix'),
@@ -133,6 +133,7 @@ class Wengine{
                 shadowMap: this.gl.getUniformLocation(shaderProgram, 'uShadowMap'),
                 lightPosition: this.gl.getUniformLocation(shaderProgram, 'uLightPosition'),
                 cameraPosition: this.gl.getUniformLocation(shaderProgram, 'uCameraPosition'),
+                materialColor: this.gl.getUniformLocation(shaderProgram, 'aMaterialColor'),
             },
         })
     }
@@ -182,6 +183,8 @@ class Wengine{
                 longMeshData.normals = longMeshData.normals.concat(meshData.normals)
                 longMeshData.textureCoordinates = longMeshData.textureCoordinates.concat(meshData.textureCoordinates)
             })
+
+            this.longBufferData = longMeshData
 
             //Pass positions to the buffer
             const positionBuffer = this.gl.createBuffer()
@@ -241,58 +244,28 @@ class Wengine{
     }
 
     createControls(){
-        document.addEventListener('keydown', (event) => {
-            console.log(event.key)
-            switch (event.key) {
-                case "d":
-                    this.scene[0].transform.position[0] -= 1;
-                break;
-                case "a":
-                    this.scene[0].transform.position[0] += 1;
-                break;
-                case "w":
-                    this.scene[0].transform.position[2] += 1;
-                break;
-                case "s":
-                    this.scene[0].transform.position[2] -= 1;
-                break;
-                case "e":
-                    this.scene[0].transform.rotation[1] -= 0.5
-                break;
-                case "q":
-                    this.scene[0].transform.rotation[1] += 0.5
-                break;
-                case "r":
-                    this.scene[0].transform.position[1] += 1
-                break;
-                case "f":
-                    this.scene[0].transform.position[1] -= 1
-                break;
 
-                case "ArrowRight":
-                    this.lightPosition[0] -= 1;
-                break;
-                case "ArrowLeft":
-                    this.lightPosition[0] += 1;
-                break;
-            }
-            let lookatPos = vec3.create()
-            lookatPos = [0,0,0]
+    }
 
-            let upDir = vec3.create()
-            upDir=[0,1,0]
+    resetScene(){
+        this.scene = JSON.parse(JSON.stringify(this.sceneStart));
+    }
 
-            let lightPos = vec3.create()
-            lightPos = this.lightPosition
-            this.lightPosition = lightPos
-            mat4.lookAt(this.directionalLight, lightPos, lookatPos, upDir)
-           
-            let eye = vec3.create()
-            eye = this.scene[0].transform.position
-            this.cameraPosition=eye
+    getScene(){
+        return this.scene
+    }
 
-            mat4.lookAt(this.mView,eye,lookatPos,upDir)
-        });
+    setScene(scene){
+        this.sceneStart = scene
+        this.scene = scene
+    }
+    
+    getWengine(){
+        return this
+    }
+
+    setPlaying(playing){
+        this.playing = playing
     }
 }
 export default Wengine;

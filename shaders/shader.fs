@@ -23,7 +23,7 @@ highp float ShadowCalculation(highp vec4 fragPosLightSpace, highp vec3 lightDir)
       highp float bias = max(1.0*(0.1-dot(vNormal, lightDir)), 0.0);
       // check whether current frag pos is in shadow
       highp float shadow = 0.0;
-      highp vec2 texelSize = vec2(2)/vec2(2024,2024);
+      highp vec2 texelSize = vec2(3)/vec2(2024,2024);
       for(int x = -1; x <= 1; ++x)
       {
             for(int y = -1; y <= 1; ++y)
@@ -32,17 +32,17 @@ highp float ShadowCalculation(highp vec4 fragPosLightSpace, highp vec3 lightDir)
                   shadow += currentDepth - bias > pcfDepth ? 1.0 : 0.0;        
             }    
       }
-      shadow /= 20.0;
+      shadow /= 10.0;
       return shadow;
 } 
 void main(void) {
 
       highp vec3 color = texture2D(uSampler, vTextureCoord).xyz*vColor.xyz;
       highp vec3 normal = normalize(vNormal);
-      highp vec3 lightColor = vec3(.5);
+      highp vec3 lightColor = vec3(.3);
 
       //ambient
-      highp vec3 ambient = 0.5 * color;
+      highp vec3 ambient = 0.7 * color;
 
       // diffuse
       highp vec3 lightPos = uLightPosition;
@@ -54,7 +54,7 @@ void main(void) {
       highp vec3 viewDir = normalize(uCameraPosition - vFragPos);
       highp float spec = 0.0;
       highp vec3 halfwayDir = normalize(lightDir + viewDir);  
-      spec = pow(max(dot(normal, halfwayDir), 0.0), 64.0);
+      spec = pow(max(dot(normal, halfwayDir), 0.0), 64.0)*0.8;
       highp vec3 specular = spec * lightColor;
 
       highp float shadow = ShadowCalculation(vFragPosLightSpace, lightDir); 

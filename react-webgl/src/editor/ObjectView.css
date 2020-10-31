@@ -1,0 +1,18 @@
+.input-position{
+  width: 100%;
+  display: flex;
+  align-items: center;
+}
+
+label.bp3-label{
+  margin: 0px 5px;
+}
+
+.input-position label{
+  margin-left: 5px;
+}
+
+.bp3-input-group .bp3-input{
+  margin: 0px 5px;
+  width: 90px;
+}

@@ -256,6 +256,10 @@ export function render(wEngine){
         wEngine.gl.uniform3fv(
             wEngine.programInfo[0].uniformLocations.cameraPosition,
             wEngine.cameraPosition)
+
+        wEngine.gl.uniform3fv(
+            wEngine.programInfo[0].uniformLocations.materialColor,
+            [wEngine.materials[gameObject.material].color.r,wEngine.materials[gameObject.material].color.g,wEngine.materials[gameObject.material].color.b])
             
         {
             // console.log(gameObject.material)
@@ -263,7 +267,7 @@ export function render(wEngine){
             // Tell WebGL we want to affect texture unit 0
             wEngine.gl.activeTexture(wEngine.gl.TEXTURE0)
             // Bind the texture to texture unit 0
-            wEngine.gl.bindTexture(wEngine.gl.TEXTURE_2D, wEngine.textures[gameObject.material.texture])
+            wEngine.gl.bindTexture(wEngine.gl.TEXTURE_2D, wEngine.textures[wEngine.materials[gameObject.material].texture])
             // Tell the shader we bound the texture to texture unit 0
             wEngine.gl.uniform1i(wEngine.programInfo[0].uniformLocations.uSampler, 0)
 
