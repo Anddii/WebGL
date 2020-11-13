@@ -8,13 +8,13 @@ var app = express();
 var jsonParser = bodyParser.json()
 
 app.get('/getscene', cors(),function (req, res) {
-    fs.readFile( "saved_files/scene.json", 'utf8', function (err, data) {
+    fs.readFile( "public/scenes/scene.json", 'utf8', function (err, data) {
         res.end( data );
     });
 })
 
 app.post('/setscene', jsonParser ,cors(),function (req, res) {
-    fs.writeFile("saved_files/scene.json", JSON.stringify(req.body), function (err) {
+    fs.writeFile("public/scenes/scene.json", JSON.stringify(req.body), function (err) {
         if (err) return console.log(err);
     })
 })

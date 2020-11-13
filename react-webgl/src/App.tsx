@@ -9,7 +9,7 @@ import GameView from './editor/GameView';
 import SceneView from './editor/SceneView';
 import HierarchyView from './editor/HierarchyView';
 import ObjectView from './editor/ObjectView';
-import { loadScene, saveScene as saveSceneReq } from './editor/Scene';
+import { saveScene as saveSceneReq } from './editor/Scene';
 
 function App() {
 
@@ -17,7 +17,6 @@ function App() {
 
   const [model, setModel] = useState<any>(FlexLayout.Model.fromJson(json))
   const [wengine, setWengine] = useState<any>(null)
-  const [loadedScene, setLoadedScene] = useState<any>([])
 
   const [selectedItem, setSelectedItem] = useState<number>(0)
   const [playing, setPlaying] = useState<boolean>(false)
@@ -32,15 +31,10 @@ function App() {
   }
 
   function saveScene(){
-    saveSceneReq('http://localhost:8081/setscene', loadedScene)
+    saveSceneReq('http://localhost:8081/setscene', wengine.sceneStart)
   }
 
   useEffect(() => {
-    loadScene('http://localhost:8081/getscene')
-    .then((resp)=>{
-      let myScene: Object = resp
-      setLoadedScene(myScene)
-    })
     const model: string | null = localStorage.getItem('model');
     if(model){
       let myModel: Object = JSON.parse(model)
@@ -56,7 +50,7 @@ function App() {
     if (component === "game"){
       return (
         <div>
-          {loadedScene.length > 0 && <GameView loadedScene={loadedScene} setWengine= {setWengine}/>}
+          {<GameView setWengine= {setWengine}/>}
         </div>);
     }
     if (component === "scene"){

@@ -1,11 +1,9 @@
-import React, { FC, useEffect, useState, useRef } from 'react';
+import React, { FC } from 'react';
 import '@blueprintjs/core/lib/css/blueprint.css';
-import { Classes, Icon, Intent, ITreeNode, Position, Tooltip, Tree } from "@blueprintjs/core";
+import { Classes, Tree } from "@blueprintjs/core";
 import * as PropTypes from 'prop-types'
 
 export const TreeView: FC<any> = props =>{
-
-    const [nodes, setNodes]: Array<any> = useState([]);
 
     return (
         <div>

@@ -11,7 +11,6 @@ export const GameView: FC<any> = props =>{
     useEffect(() => {
         if(!wengine){
             const wengine = new Wengine('#webgl')
-            wengine.setScene(props.loadedScene)
             props.setWengine(wengine.getWengine())
             setWengine(wengine.getWengine())
         }
@@ -31,7 +30,6 @@ export const GameView: FC<any> = props =>{
 }
 
 GameView.propTypes = {
-    loadedScene: PropTypes.array.isRequired,
     setWengine: PropTypes.func.isRequired,
 }
 

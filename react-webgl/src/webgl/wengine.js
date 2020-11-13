@@ -9,6 +9,8 @@ import {loadTexture, createEmptyTexture} from "./loadTexture.js"
 
 import {shadowMapRender, render} from "./render.js"
 
+import {loadScene} from './loadScene.js'
+
 class Wengine{
     
     gl
@@ -52,18 +54,25 @@ class Wengine{
             alert("Unable to initialize WebGL. Your browser or machine may not support it.")
             return
         }
+
+
+        loadScene('/scenes/scene.json')
+        .then((resp)=>{
+            this.sceneStart=resp
+            this.scene=resp
+        })
         
-       this.textures.push(createEmptyTexture(this.gl))
-       this.textures.push(loadTexture(this.gl, './images/ground.jpg'))
+        this.textures.push(createEmptyTexture(this.gl))
+        this.textures.push(loadTexture(this.gl, './images/ground.jpg'))
 
-       this.materials['normal']=new Material(0,{r:1,g:1,b:1,a:1})
-       this.materials['ground']=new Material(1,{r:1,g:1,b:1,a:1})
-       this.materials['shadow']=new Material(2,{r:1,g:1,b:1,a:1})
+        this.materials['normal']=new Material(0,{r:1,g:1,b:1,a:1})
+        this.materials['ground']=new Material(1,{r:1,g:1,b:1,a:1})
+        this.materials['shadow']=new Material(2,{r:1,g:1,b:1,a:1})
 
-       this.depthTextureExt = this.gl.getExtension('WEBGL_depth_texture');
+        this.depthTextureExt = this.gl.getExtension('WEBGL_depth_texture');
 
-       this.createShaderProgram('/shaders/shader.vs', '../shaders/shader.fs')
-       .then((res) => {
+        this.createShaderProgram('/shaders/shader.vs', '../shaders/shader.fs')
+        .then((res) => {
             this.shaderPrograms.push(res)
             this.createShaderProgram('../shaders/shadowShader.vs', '../shaders/shadowShader.fs')
             .then((res) => {
@@ -74,13 +83,11 @@ class Wengine{
                     this.start()
                 })
             })
-       })
+        })
     }
 
     start(){
-        // localStorage.removeItem('scene');
-        
-        this.scene = JSON.parse(JSON.stringify(this.sceneStart));
+
         this.createControls()
 
         this.timeLast = Date.now() * 0.001

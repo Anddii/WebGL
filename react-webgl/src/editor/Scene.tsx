@@ -1,11 +1,3 @@
-export function loadScene(filePath: string){
-    return fetch(filePath)
-    .then((r: any) => r.text())
-    .then((text:string)  => {
-        return JSON.parse(text)
-    })
-}
-
 export function saveScene(filePath: string, data: JSON){
     const putMethod = {
         method: 'POST', // Method itself
