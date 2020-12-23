@@ -32,6 +32,16 @@ function App() {
 
   function saveScene(){
     saveSceneReq('http://localhost:8081/setscene', wengine.sceneStart)
+
+    const materials:any = []
+
+    for(const material in wengine.materials){
+      materials.push({
+        [material]: wengine.materials[material]
+      })
+    }
+
+    saveSceneReq('http://localhost:8081/setmaterials', materials)
   }
 
   useEffect(() => {

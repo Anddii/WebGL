@@ -19,6 +19,12 @@ app.post('/setscene', jsonParser ,cors(),function (req, res) {
     })
 })
 
+app.post('/setmaterials', jsonParser ,cors(),function (req, res) {
+    fs.writeFile("public/materials/materials.json", JSON.stringify(req.body), function (err) {
+        if (err) return console.log(err);
+    })
+})
+
 var corsOptions = {
     origin: 'http://localhost:3000',
     optionsSuccessStatus: 200 // For legacy browser support

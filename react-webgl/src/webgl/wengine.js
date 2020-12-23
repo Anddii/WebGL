@@ -61,13 +61,22 @@ class Wengine{
             this.sceneStart=resp
             this.scene=resp
         })
-        
+
         this.textures.push(createEmptyTexture(this.gl))
         this.textures.push(loadTexture(this.gl, './images/ground.jpg'))
 
-        this.materials['normal']=new Material(0,{r:1,g:1,b:1,a:1})
-        this.materials['ground']=new Material(1,{r:1,g:1,b:1,a:1})
-        this.materials['shadow']=new Material(2,{r:1,g:1,b:1,a:1})
+        loadScene('/materials/materials.json')
+        .then((resp)=>{
+            console.log(resp)
+            for(const material in resp){
+                const key = Object.keys(resp[material])[0]
+                this.materials[key]= new Material(resp[material][key].texture,resp[material][key].color)
+            }
+        })
+        
+        // this.materials['normal']=new Material(0,{r:1,g:1,b:1,a:1})
+        // this.materials['ground']=new Material(1,{r:1,g:1,b:1,a:1})
+        // this.materials['shadow']=new Material(2,{r:1,g:1,b:1,a:1})
 
         this.depthTextureExt = this.gl.getExtension('WEBGL_depth_texture');
 
@@ -168,7 +177,7 @@ class Wengine{
         const meshCreator = new MeshCreator()
         
         const promisePlane =  meshCreator.plane(this.meshProperties)
-        const promiseObj = meshCreator.objFile(this.meshProperties, './obj/teapot.obj')
+        const promiseObj = meshCreator.objFile(this.meshProperties, './obj/teapot2.obj')
 
         return Promise.all([promisePlane, promiseObj]).then((values) => {
             //Combine multiple mesh datas to one large

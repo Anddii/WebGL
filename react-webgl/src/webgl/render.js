@@ -146,7 +146,7 @@ export function render(wEngine){
     // Tell WebGL how to pull out the colors from the color buffer
     // into the vertexColor attribute.
     {
-        const numComponents = 4
+        const numComponents = 3
         const type = wEngine.gl.FLOAT
         const normalize = false
         const stride = 0
@@ -262,8 +262,6 @@ export function render(wEngine){
             [wEngine.materials[gameObject.material].color.r,wEngine.materials[gameObject.material].color.g,wEngine.materials[gameObject.material].color.b])
             
         {
-            // console.log(gameObject.material)
-
             // Tell WebGL we want to affect texture unit 0
             wEngine.gl.activeTexture(wEngine.gl.TEXTURE0)
             // Bind the texture to texture unit 0

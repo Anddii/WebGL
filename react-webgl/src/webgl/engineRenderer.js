@@ -235,6 +235,8 @@ class Wengine{
                     this.lightPosition[0] += 1;
                 break;
             }
+
+            let cameraFront = [0,0,1]
             let lookatPos = vec3.create()
             lookatPos = [0,0,0]
 
@@ -243,8 +245,10 @@ class Wengine{
            
             let eye = vec3.create()
             eye = this.scene[0].transform.position
+            
+            vec3.add(lookatPos,eye, cameraFront)
             this.cameraPosition=eye
-
+            console.log(eye+cameraFront)
             mat4.lookAt(this.mView,eye,lookatPos,upDir)
         });
     }

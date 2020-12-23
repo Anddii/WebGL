@@ -22,7 +22,7 @@ export default class MeshCreator{
           indices: res.indices,
           colors: res.colors,
           normals: res.normals,
-          // textureCoordinates: textureCoordinates
+          textureCoordinates: res.normals
         })
       })
     })

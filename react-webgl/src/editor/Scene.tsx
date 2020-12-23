@@ -7,7 +7,5 @@ export function saveScene(filePath: string, data: JSON){
         body: JSON.stringify(data) // We send data in JSON format
     }
 
-    console.log(putMethod.body)
-       
     fetch(filePath, putMethod)
 }
